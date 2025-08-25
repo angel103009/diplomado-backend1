@@ -42,8 +42,8 @@ app.post("/upload", upload.single("archivo"), async (req, res) => {
 
     // Enviar correo al admin (puedes usar el mismo correo para recibirlo)
     await transporter.sendMail({
-      from: `"Diplomado" <Mariana.gomez.tw@gmail.com>`,
-      to: "Mariana.gomez.tw@gmail.com", // aquí pon el correo destino
+      from: `"Diplomado" <mariana.gomez.tw@gmail.com>`,
+      to: "angelesteban.rojas.tw@gmail.com", // aquí pon el correo destino
       subject: `Nueva entrega - Actividad ${actividad}`,
       text: `Un estudiante subió un archivo para la actividad ${actividad}.
 Archivo: ${req.file.filename}`
