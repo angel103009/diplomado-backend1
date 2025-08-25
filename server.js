@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 // === CONFIGURAR SENDGRID ===
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// === MULTER EN MEMORIA ===
+// === MULTER EN MEMORIA (no guarda en /uploads) ===
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
@@ -17,8 +17,8 @@ const upload = multer({ storage });
 app.use(cors());
 app.use(express.json());
 
-// === ENDPOINT DE PRUEBA ===
-app.get("/", (req, res) => {
+// === PING ===
+app.get("/", (_req, res) => {
   res.json({ status: "ok", message: "Servidor funcionando con SendGrid" });
 });
 
