@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 // === CONFIGURAR SENDGRID ===
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-// === MULTER EN MEMORIA (no guarda en /uploads) ===
+// === MULTER EN MEMORIA (no guarda en disco) ===
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
@@ -17,7 +17,7 @@ const upload = multer({ storage });
 app.use(cors());
 app.use(express.json());
 
-// === PING ===
+// === ENDPOINT DE PRUEBA ===
 app.get("/", (_req, res) => {
   res.json({ status: "ok", message: "Servidor funcionando con SendGrid" });
 });
@@ -30,7 +30,10 @@ app.post("/upload", upload.single("archivo"), async (req, res) => {
 
   try {
     const msg = {
-      to: ["Mariana.gomez.tw@gmail.com", "Marigoco09@gmail.com"], // destinatarios
+      to: [
+        { email: "Mariana.gomez.tw@gmail.com" },
+        { email: "Marigoco09@gmail.com" }
+      ],
       from: process.env.SENDGRID_FROM, // remitente verificado en SendGrid
       subject: "📂 Nuevo archivo recibido",
       text: `Se ha recibido un archivo: ${req.file.originalname}`,
