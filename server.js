@@ -1,62 +1,78 @@
 const express = require("express");
-const multer = require("multer");
 const cors = require("cors");
-const sgMail = require("@sendgrid/mail");
+const nodemailer = require("nodemailer");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
-// === CONFIGURAR SENDGRID ===
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
-// === MULTER EN MEMORIA (no guarda en disco) ===
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
-
-// === MIDDLEWARES ===
 app.use(cors());
 app.use(express.json());
 
-// === ENDPOINT DE PRUEBA ===
-app.get("/", (_req, res) => {
-  res.json({ status: "ok", message: "Servidor funcionando con SendGrid" });
+// === Configuración de Multer para guardar archivos ===
+const uploadDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadDir),
+  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname)
 });
 
-// === SUBIR Y ENVIAR ARCHIVO POR CORREO ===
+const upload = multer({ storage });
+
+// === Ruta para subir archivos y mandar correo ===
 app.post("/upload", upload.single("archivo"), async (req, res) => {
+  const { actividad } = req.body;
+
   if (!req.file) {
-    return res.status(400).json({ message: "❌ No se envió archivo" });
+    return res.status(400).json({ message: "No se envió ningún archivo" });
   }
 
   try {
-    const msg = {
-      to: [
-        { email: "Mariana.gomez.tw@gmail.com" },
-        { email: "Marigoco09@gmail.com" }
-      ],
-      from: process.env.SENDGRID_FROM, // remitente verificado en SendGrid
-      subject: "📂 Nuevo archivo recibido",
-      text: `Se ha recibido un archivo: ${req.file.originalname}`,
-      attachments: [
-        {
-          content: req.file.buffer.toString("base64"),
-          filename: req.file.originalname,
-          type: req.file.mimetype,
-          disposition: "attachment"
-        }
-      ]
-    };
+    // Configurar transporte con Gmail
+    let transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "Mariana.gomez.tw@gmail.com", // tu correo de pruebas
+        pass: "Pamela98"                    // tu contraseña de pruebas
+      }
+    });
 
-    await sgMail.send(msg);
-    console.log(`📧 Archivo ${req.file.originalname} enviado con éxito`);
-    res.json({ message: "✅ Archivo enviado correctamente" });
-  } catch (err) {
-    console.error("❌ Error enviando correo:", err);
-    res.status(500).json({ message: "Error enviando correo" });
+    // Enviar correo al admin (puedes usar el mismo correo para recibirlo)
+    await transporter.sendMail({
+      from: `"Diplomado" <Mariana.gomez.tw@gmail.com>`,
+      to: "Mariana.gomez.tw@gmail.com", // aquí pon el correo destino
+      subject: `Nueva entrega - Actividad ${actividad}`,
+      text: `Un estudiante subió un archivo para la actividad ${actividad}.
+Archivo: ${req.file.filename}`
+    });
+
+    res.json({ message: "✅ Archivo recibido y correo enviado" });
+  } catch (error) {
+    console.error("Error enviando correo:", error);
+    res.status(500).json({ message: "❌ Error al enviar correo" });
   }
 });
 
-// === INICIAR SERVIDOR ===
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+// === Ruta para listar archivos ===
+app.get("/list", (req, res) => {
+  try {
+    const archivos = fs.readdirSync(uploadDir).map(name => ({
+      name,
+      url: `/uploads/${name}`
+    }));
+    res.json({ archivos });
+  } catch (err) {
+    res.status(500).json({ message: "Error al listar archivos" });
+  }
 });
+
+// === Servir archivos subidos ===
+app.use("/uploads", express.static(uploadDir));
+
+// === Puerto dinámico (Render) o 3000 en local ===
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`✅ Servidor corriendo en puerto ${PORT}`));
+
